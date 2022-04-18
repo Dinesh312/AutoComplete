@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+    <head>
+        <meta charset="utf-8">
+        <title>Auto Complete</title>
+        <!-- Google Font APIs -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat&family=Ubuntu&display=swap" rel="stylesheet">
+        <!-- Bootstrap -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+
+        <link rel="stylesheet" href="css/styles.css">
+        <script src="script.js"></script>
+
+    </head>
+    <body>
+        <div class="content">
+            <h2>Auto complete</h2>
+            <form autocomplete="off" class="" action="index.html">
+                <div class="autocomplete" style="width:300px;">
+                    <input id="myInput" class="form-control" type="text" name="suggestion" placeholder="Type something in">
+                </div>
+                <button type="button" class="btn btn-dark">Submit</button>
+            </form>
+        </div>
+
+    <script>
+        // Trie retrieval
+        class Node{
+            constructor(){
+                this.links = new Array(26);
+                this.flag = false;
+                for(let i=0; i<26; i++)
+                    this.links[i] = null;
+                this.suggestions = [];
+            }
+        }
+
+        let root = new Node();
+
+        function insert(word, complete) {
+            let level, index;
+            let node = root;
+            for(level = 0; level < word.length; level++){
+                index = word[level].charCodeAt(0) - 'a'.charCodeAt(0);
+                if(node.links[index] == null){
+                    node.links[index] = new Node();
+                }
+                node.suggestions.push(complete);
+                node = node.links[index];
+            }
+            node.flag = true;
+            node.suggestions.push(complete);
+        }
+
+        function complete(word) {
+            let level, index;
+            let node = root;
+            for(level = 0; level < word.length; level++){
+                index = word[level].charCodeAt(0) - 'a'.charCodeAt(0);
+                if(node.links[index] == null){
+                    node.suggestions = [];
+                    // return "first quit";
+                    return node.suggestions;
+                }
+                node = node.links[index];
+            }
+            if(node.flag || startsWith(word)){
+                return node.suggestions;
+            }
+            node.suggestions = [];
+            // return "second quit";
+            return node.suggestions;
+        }
+
+        function startsWith(word) {
+            let level, index;
+            let node = root;
+            for(index = 0; index < word.length; index++){
+                if(node.links[index] == null){
+                    return false;
+                }
+                node = node.links[index];
+            }
+            return true;
+        }
+
+        // let words = ["present", "presentation", "presentations", "presenting"];
+        // inserting possible words into the Trie
+        let i;
+        for(i = 0; i<words.length; i++){
+            insert(words[i], words[i]);
+        }
+
+        function autocomplete(inp, arr){
+            var current;
+            // when someone writes in the field
+            inp.addEventListener("input", function(e) {
+                var start = performance.now();
+
+                var a,b,i,val = this.value;
+                closeAllLists();
+                if(!val){
+                    return false;
+                }
+                current = -1;
+                a = document.createElement("DIV");
+                a.setAttribute("id", this.id + "autocomplete-list");
+                a.setAttribute("class", "autocomplete-items");
+                this.parentNode.appendChild(a);
+                var ctr = 0;
+                for(i=0; i<arr.length; i++){
+                    if(arr[i].substr(0, val.length) == val){
+                        ctr++;
+                        b = document.createElement("DIV");
+                        b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+                        b.innerHTML += arr[i].substr(val.length);
+                        b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+
+                        b.addEventListener("click", function(e){
+                            inp.value = this.getElementsByTagName("input")[0].value;
+                            closeAllLists();
+                        });
+                        a.appendChild(b);
+                    }
+                    if(ctr == 5){
+                        break;
+                    }
+                }
+                var end = performance.now();
+                console.log(end-start);
+
+            });
+
+            // when a key is pressed
+            inp.addEventListener("keydown", function(e){
+                var x = document.getElementById(this.id + "autocomplete-list");
+                if(x){
+                    x = x.getElementsByTagName("div");
+                }
+                // down key is pressed
+                if(e.keyCode == 40){
+                    current++;
+                    addActive(x);
+                }
+                // up key is pressed
+                else if(e.keyCode == 38){
+                    current--;
+                    addActive(x);
+                }
+                // enter key is pressed
+                else if(e.keyCode == 13){
+                    e.preventDefault();
+                    if(current>-1){
+                        if(x){
+                            x[current].click();
+                        }
+                    }
+                }
+            });
+
+            function addActive(x){
+                if(!x) {
+                    return false;
+                }
+                removeActive(x);
+                if(current >= x.length){
+                    current = 0;
+                }
+                if(current < 0){
+                    current = (x.length-1);
+                }
+                x[current].classList.add("autocomplete-active");
+            }
+
+            function removeActive(x){
+                for(var i=0; i<x.length; i++){
+                    x[i].classList.remove("autocomplete-active");
+                }
+            }
+
+            function closeAllLists(elem){
+                var x = document.getElementsByClassName("autocomplete-items");
+                for(var i=0; i<x.length; i++){
+                    if(elem!=x[i] && elem!=inp){
+                        x[i].parentNode.removeChild(x[i]);
+                    }
+                }
+            }
+
+            document.addEventListener("click", function(e){
+                closeAllLists(e.target);
+            });
+        }
+        autocomplete(document.getElementById("myInput"), complete(myInput));
+    </script>
+    </body>
+</html>
